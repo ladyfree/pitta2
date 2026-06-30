@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto Refresh</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 280px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #ffffff;
+      color: #1a1a1a;
+    }
+
+    /* 헤더 */
+    .header {
+      background: #2563eb;
+      padding: 16px 18px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-icon {
+      width: 28px;
+      height: 28px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .header-icon svg { width: 16px; height: 16px; color: white; }
+    .header-title { font-size: 15px; font-weight: 600; color: white; }
+    .header-sub { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 1px; }
+
+    /* 상태 배지 */
+    .status-bar {
+      padding: 10px 18px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94a3b8;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .status-dot.active { background: #22c55e; animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .status-text { font-size: 12px; color: #64748b; }
+    .status-text span { font-weight: 500; color: #1a1a1a; }
+
+    /* 메인 컨텐츠 */
+    .content { padding: 18px; }
+
+    /* 시간 입력 섹션 */
+    .label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .time-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .time-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .time-field label {
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+    }
+    .time-field input {
+      width: 100%;
+      text-align: center;
+      padding: 8px 4px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1a1a;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .time-field input:focus {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .time-field input:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* 빠른 선택 버튼 */
+    .quick-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    .quick-btns {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .quick-btn {
+      padding: 5px 10px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      background: white;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .quick-btn:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+    .quick-btn.selected { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+    .quick-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* 자동시작 체크박스 */
+    .auto-start {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .auto-start input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2563eb;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .auto-start-text { font-size: 12px; color: #475569; line-height: 1.4; }
+    .auto-start-text strong { color: #1a1a1a; font-weight: 600; }
+
+    /* 시작/정지 버튼 */
+    .btn-main {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+    .btn-main svg { width: 16px; height: 16px; }
+    .btn-start { background: #2563eb; color: white; }
+    .btn-start:hover { background: #1d4ed8; }
+    .btn-start:active { transform: scale(0.98); }
+    .btn-stop { background: #fee2e2; color: #dc2626; }
+    .btn-stop:hover { background: #fecaca; }
+    .btn-stop:active { transform: scale(0.98); }
+
+    /* 카운트다운 표시 */
+    .countdown {
+      display: none;
+      margin-top: 14px;
+      padding: 12px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .countdown.visible { display: block; }
+    .countdown-label { font-size: 11px; color: #16a34a; margin-bottom: 4px; }
+    .countdown-timer {
+      font-size: 24px;
+      font-weight: 700;
+      color: #15803d;
+      letter-spacing: 1px;
+    }
+
+    /* 푸터 */
+    .footer {
+      padding: 10px 18px;
+      border-top: 1px solid #f1f5f9;
+      text-align: center;
+    }
+    .footer-text { font-size: 11px; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">Auto Refresh</div>
+      <div class="header-sub">자동 새로고침</div>
+    </div>
+  </div>
+
+  <!-- 상태 바 -->
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <div class="status-text" id="statusText">비활성</div>
+  </div>
+
+  <!-- 메인 -->
+  <div class="content">
+
+    <div class="label">새로고침 간격 설정</div>
+    <div class="time-grid">
+      <div class="time-field">
+        <input type="number" id="inputHour" min="0" max="23" value="0" placeholder="0">
+        <label>시간</label>
+      </div>
+      <div class="time-field">
+        <input type="number" id="inputMin" min="0" max="59" value="5" placeholder="0">
+        <label>분</label>
+      </div>
+      <div class="time-field">
+        <input type="number" id="inputSec" min="0" max="59" value="0" placeholder="0">
+        <label>초</label>
+      </div>
+    </div>
+
+    <div class="quick-label">빠른 선택</div>
+    <div class="quick-btns">
+      <button class="quick-btn" data-sec="30">30초</button>
+      <button class="quick-btn" data-sec="60">1분</button>
+      <button class="quick-btn" data-sec="300">5분</button>
+      <button class="quick-btn" data-sec="600">10분</button>
+      <button class="quick-btn" data-sec="1800">30분</button>
+    </div>
+
+    <label class="auto-start" for="autoStartCheck">
+      <input type="checkbox" id="autoStartCheck" checked>
+      <span class="auto-start-text">이 사이트 재접속 시 <strong>자동으로 시작</strong></span>
+    </label>
+
+    <button class="btn-main btn-start" id="mainBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="btnIcon">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      <span id="btnText">시작</span>
+    </button>
+
+    <div class="countdown" id="countdown">
+      <div class="countdown-label">다음 새로고침까지</div>
+      <div class="countdown-timer" id="countdownTimer">00:05:00</div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">같은 사이트 도메인 기준으로 설정이 저장됩니다</div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
